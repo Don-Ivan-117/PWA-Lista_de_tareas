@@ -1,0 +1,158 @@
+---Librerias---
+Para formularios:
+    -React Hook form
+        - npm i react-hook-form
+    - Formik (con Yup)
+    - ZOD (para las validaciones)
+
+Para notificaciones:
+    - npm install react-toastify
+
+Estado global:
+    - npm install zustand
+
+--USAR REACT HOOK FORM--
+
+import { useForm } from 'react-hook-form'
+
+Se le aplica una destructuracion al hook de useForm para usar sus metodos:
+const { register, handleSubmit, setValue , formState: { errors}, reset} = useForm<DraftPatient>()
+
+    * register: Permite registrar un input o un select y aplicar las reglas de validacion
+        - Se usa tomando un copia del metodo (register) y colocandolo como elemento en la etiqueta input, al igual
+          se le debe pasar un nombre unico, algo asi como un name o id para identificar a ese input en especifico y se 
+          usa un objeto literal para especificar si es requerido, algun mensaje de error, etc..
+            - {...register('name', {
+                    required: 'El Nombre del paciente es obligatorio'
+                })}
+
+            - Este no esta en el proyecto pero esta curioso, 
+            - maxLength : {
+                value: 8, // cantidad maxima de caracteres
+                message: 'Maximo 8 caracteres' // mensaje de error
+            }
+
+            Nota: cuando usamos maxLength se debe llamar a traves de su nombre, no el que le asignamos a ese input con register ("name" en este caso)
+            Nota 2: eltoString() es solo si no estamos usando tipado, si usamos tipado (useForm<DraftPatient>()) ya no es necesario
+            {errors.maxLength && (
+                    <Error>{errors.maxLength?.message?.toString()}</Error>
+                )}
+
+    *handleSubmit: Valida el formulario y sus campos.
+        - Se usa colocando en el formulario de forma directa a traves de un evento (onSubmit), recibe como argumento una funcion 
+          que se encarga de la logica del manejo de la informacion del formulario. SIS UNA FUNCION QUE REQUIERE DE OTRA FUNCION PARA FUNCIONAR :|
+            - onSubmit={handleSubmit(registerPatient)}
+            - handleSubmit: Viene de react hook form
+            - registerPatient: nosotros la creamos para menejar los valores del formulario
+
+    *formState:{errors}: formState, como su nombre lo indica maneja el estado del formulario es el objeto {errors} que guarda los mensajes de error de los
+    inpust donde se usa register (tambien proveniente de react hook form):
+        - Se usa, ya sea extrayendo de forma directa el mensaje del objeto de errors o pasandolo a un componente. Primero se extrae el objeto de errors, de ahi el nombre
+          (el que asignamos con register) y por ultimo el mensaje de error que tambien asignamos usando register.
+            - {errors.name && (
+                    <Error>{errors.name?.message}</Error>
+                )}
+            - erros, es el objeto
+            - name, es el nombre que nosotros le asignamos al input de nombre usando register
+            - message, es el mensaje que nosotros tambien asignamos usando register, mas especificamene en el objeto donde declaramos al input como requerido
+    
+    *reset: reinicia los valores del formulario. Similar a devolver un objeto a sus valores por defecto 
+
+    *setValue: Asignar un valor a un input y ya, para esto solo ocupas la funcion, el nombre del input (mismo que asignamos con register) y el valor que queremos Asignar
+        - setValue('name', activePatient.name)
+
+---Zustand----
+Dependencia para manejar un estado gobal (alternativa a Redux Toolkit)
+Para manejar estados, puedes crear una carpeta llamada "store" o en caso de solo tener un store en la ruta raiz del proyecto (store.ts)
+Nota: Store es similiar a reducer, pero no se tons pq se compara con global context :|
+
+//Funcion para crear un store
+import { create } from 'zustand'
+import { Patient } from './types'
+
+//creamos un tipado de lo que va a exportar el store
+type PatientState = {
+    patients: Patient[] //arreglo que almacenara a los pacientes
+}
+
+//Creamos el store y le asignamos el tipado
+export const usePatientStore = create<PatientState>(()=>({
+    patients: []
+}))
+
+En esencia eso es todo lo que se requiere hacer con Zustand para crear un estado global (no reducer, no context, no enrrollar la app y tampoco crear un hook de apoyo ), de aqui en adelante es agregar metodos y valores
+
+Dentro del export, se encuantran todos los datos que mandaremos a otros componentes.
+export const usePatientStore = create<PatientState>((set, get)=>({
+    patients: [],
+    addPatient: (data) => {
+            const newPatient = createPatient(data)
+            set((state) => ({
+                patients: [...state.patients, newPatient]
+            }))
+        },
+}))
+
+Aqui estamos exportando dos cosas:
+    - patients: El  arreglo de pacientes que vallamos agregando
+    - addPatient() : Funcion para agregar pacientes (esta funcion usa otra para agregar un id a un paciente, como la funcion que agrega el id no se necesita
+      en otro sitio, se coloca dentro del mismo store pero fuera del export)
+    - set: sirve para modificar el store (lo que estamos exportando). Dentro del store en la funcion de addPatient, en este fragmento:
+        - set((state) => ({
+                patients: [...state.patients, newPatient]
+            }))
+
+            - set: modificador del estado general del store
+            - state: este parametro como tal no lo debemos enviar de ninguna lado, ya que represente el estado actual del store
+            - Accediendo a los valores del store gracias state, podemos actualizar el arreglo de patients, indicando a traves de la sintaxis de punto
+              que ahora su valor sera el actual del store (...state.patients) mas el nuevo paciente.
+
+    - get: ESTE COMO TAL NO SE USA EN EL PROYECTO, PERO EXISTE. te proporciona acceso directo al estado actual de la tienda. Esto es útil si necesitas leer el estado dentro de una función 
+      sin necesidad de usar un hook o sin desencadenar una re-renderización.
+        - const currentState = get().patients;
+
+------TOASTIFY--------
+Primero se importa en el App.tsx:
+import { ToastContainer} from 'react-toastify'
+import "react-toastify/dist/ReactToastify.css"
+
+y antes de que cierre el fragment del App.tsx colocamos el componente:
+    -  <ToastContainer />
+
+Segundo donde lo queremos usar, 
+import { toast } from 'react-toastify'
+
+Hay dos formas de mostrar alertas, con un objeto o con sintaxis de punto:
+- toast.success('Paciente Registrado Correctamente')
+- toast('Paciente Actualizado Correctamente', {
+                type: 'success'
+            })
+
+
+--------Notas Generales-------
+- Al parecer la libreria de react hook form alterna entre los valores del message de un input, cambiando entre el que menciona al campo como obligatorio y el que saldria al validar un correo (basado en el input de e-mail del form).
+- Podemos agregar un tipado a react hook form, const {} = useForm<DraftPatient>()
+- El método handleSubmit de react-hook-form es responsable de gestionar el envío del formulario. Cuando el formulario es enviado, handleSubmit recopila todos los datos del formulario, los valida (si tienes validaciones configuradas), y luego pasa esos datos a la función que proporcionas (registerPatient).
+- zustand se encarga de la inmutabilidad del estado por ti. No necesitas preocuparte por hacer copias profundas del estado para mantener la inmutabilidad, como podrías hacer en otras librerías como Redux. La función set y get gestiona esta lógica internamente.
+    - export const usePatientStore = create<PatientState>((set, get)) // El set que esta a get
+- Puedes usar cualquiera de estas dos formas para extraer los valores del Store, zustand, nose:
+    - const patients = usePatientStore((state) => state.patients)
+    - const {patients} = usePatientStore()
+
+- devtools dentro del store, es para mejorar la experiencia de desarrollo en el navegador. No afecta la funcionalidad del store.
+    - import { devtools } from 'zustand/middleware'
+    - Envolvemos todo el estore ( la funcion de export) con la funcion devtools.
+    - Para usar devtools necesitamos instalar una extension en el navegador llamada "Redux devtools".
+      La herramienta nos ayuda a ver los valores almacenados en el store
+
+- Persist: Nos permite guardar la informacion en localStorage de manera exageradamente sencilla.
+    - import { devtools, persist } from 'zustand/middleware'
+    - De ahi solo envolvemos todo el store con el metodo "persist", en caso de usar devtools este debera envolver todo incluyendo el persist.
+    - y despues de la funcion de retorno solo creamos un objeto con el nombre del localStorage y el tipo de guardado (localStora o sessionStorage):
+         {
+            name: 'patient-storage',
+            storage: {createJSONStorage(()=>localStorage)} o  storage: {createJSONStorage(()=>sessionStorage)}
+        }
+        
+    - Si queremos guardar en localStorage basta con colocar el objeto solo con el atributo name, si no habra que especificar.
+        {name: 'patient-storage'}

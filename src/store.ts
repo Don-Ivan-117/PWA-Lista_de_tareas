@@ -1,49 +1,55 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
-import { DraftPatient, Patient } from './types'
+import { Task, DraftTask } from './types'
 
-type PatientState = {
-    patients: Patient[]
-    activeId: Patient['id']
-    addPatient: (data: DraftPatient) => void
-    deletePatient: (id: Patient['id']) => void
-    getPatientById: (id: Patient['id']) => void
-    updatePatient: (data: DraftPatient) => void
+type TaskState = {
+    // Valores
+    tasks: Task[]
+    activeId: Task['id'] // Este valor solo almacena el id del paciente  aeditar nada mas 
+    // Funciones: nombre del parametro, tipo de dato y si retorna o no algun valor
+    addTask: (data: DraftTask) => void
+    deleteTask: (id: Task['id']) => void
+    getTaskById: (id: Task['id']) => void //obtener el id
+    updateTask: (data: DraftTask) => void // editar la información del id obtenido. Usa el type DraftPatient por que al volver al form para su edicion no necesita id
 }
 
-const createPatient = (patient: DraftPatient) : Patient => {
-    return { ...patient, id: uuidv4() }
+const createTask = (task: DraftTask) : Task => {
+    const fechaNueva = new Date();
+    const fecha = fechaNueva.toLocaleDateString('es-ES')
+    const hora = fechaNueva.toLocaleTimeString('es-ES')
+    return { ...task, id: uuidv4(), fecha, hora }
 }
 
-export const usePatientStore = create<PatientState>()(
+// Store
+export const useTaskStore = create<TaskState>()(
     devtools(
-    persist( (set) => ({
-        patients: [],
+    persist((set) => ({
+        tasks: [],
         activeId: '',
-        addPatient: (data) => {
-            const newPatient = createPatient(data)
+        addTask: (data) => {
+            const newTask = createTask(data)
             set((state) => ({
-                patients: [...state.patients, newPatient]
+                tasks: [...state.tasks, newTask]
             }))
         },
-        deletePatient: (id) => {
+        deleteTask: (id) => {
             set((state) => ({
-                patients: state.patients.filter( patient => patient.id !== id )
+                tasks: state.tasks.filter( task => task.id !== id )
             }))
         },
-        getPatientById: (id) => {
+        getTaskById: (id) => {
             set(() => ({
                 activeId: id
             }))
         },
-        updatePatient: (data) => {
+        updateTask: (data) => {
             set((state) => ({
-                patients: state.patients.map( patient => patient.id === state.activeId ? {id: state.activeId, ...data } : patient),
-                activeId: ''
+                tasks: state.tasks.map( task => task.id === state.activeId ? {id: state.activeId, ...data } : task),
+                activeId: '' // Despues de actualizar el usuario, reiniciar el valor del ID
             }))
         }
     }), {
-        name: 'patient-storage'
+        name: 'task-storage',
     })
 ))
