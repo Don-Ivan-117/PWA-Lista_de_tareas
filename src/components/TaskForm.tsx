@@ -13,7 +13,7 @@ const TaskForm = () => {
     const tasks = useTaskStore(state => state.tasks)
     const updateTask = useTaskStore(state => state.updateTask)
 
-    const { register, handleSubmit, setValue , formState: { errors}, reset} = useForm<DraftTask>()
+    const { register, handleSubmit, setValue, reset} = useForm<DraftTask>()
 
     useEffect(()=>{
         if(activeId){
